@@ -1,7 +1,7 @@
 require 'forwardable'
-  
+
 module Scruffy
-  
+
   # ==Scruffy Graphs
   #
   # Author:: Brasten Sager
@@ -38,7 +38,7 @@ module Scruffy
   #   OR
   #
   #   graph << Scruffy::Layers::Line.new(:title => 'John', :points => [100, -20, 30, 60])
-  #   graph << Scruffy::Layers::Line.new(:title => 'Sara', :points => [120, 50, -80, 20])  
+  #   graph << Scruffy::Layers::Line.new(:title => 'Sara', :points => [120, 50, -80, 20])
   #
   # Now that we've created our graph and added a layer to it, we're ready to render!  You can render the graph
   # directly to SVG or any other image format (supported by RMagick) with the Graph#render method:
@@ -75,20 +75,20 @@ module Scruffy
 
   class Graph
     extend Forwardable
-    
+
     include Scruffy::Helpers::LayerContainer
 
     # Delegating these getters to the internal state object.
-    def_delegators  :internal_state, :title,:x_legend,:y_legend, :theme, :default_type, 
+    def_delegators  :internal_state, :title,:x_legend,:y_legend, :theme, :default_type,
                     :point_markers,:point_markers_rotation,:point_markers_ticks, :value_formatter, :rasterizer,
                     :key_formatter
-                  
+
     def_delegators  :internal_state, :title=, :theme=,:x_legend=,:y_legend=, :default_type=,
                     :point_markers=,:point_markers_rotation=,:point_markers_ticks=, :value_formatter=, :rasterizer=,
                     :key_formatter=
-    
+
     attr_reader :renderer     # Writer defined below
-    
+
     # Returns a new Graph.  You can optionally pass in a default graph type and an options hash.
     #
     #   Graph.new           # New graph
@@ -106,7 +106,7 @@ module Scruffy
     # value_formatter::   Sets a formatter used to modify marker values prior to rendering
     # point_markers::  Sets the x-axis marker values
     # point_markers_rotation::  Sets the angle of rotation for x-axis marker values
-    # point_markers_ticks::  Sets a small tick mark above each marker value.  Helful when used with rotation.    
+    # point_markers_ticks::  Sets a small tick mark above each marker value.  Helful when used with rotation.
     # rasterizer::  Sets the rasterizer to use when rendering to an image format.  Defaults to RMagick.
     def initialize(*args)
       self.default_type   = args.shift if args.first.is_a?(Symbol)
@@ -114,21 +114,21 @@ module Scruffy
       raise ArgumentError, "The arguments provided are not supported." if args.size > 0
 
       options ||= {}
-      
-      
+
+
       self.theme = Scruffy::Themes::Standard.new
       self.renderer = Scruffy::Renderers::Standard.new
-      self.rasterizer = Scruffy::Rasterizers::MiniMagickRasterizer.new
+      self.rasterizer = Scruffy::Rasterizers::RMagickRasterizer.new
       self.value_formatter = Scruffy::Formatters::Number.new
       self.key_formatter = Scruffy::Formatters::Number.new
 
       %w(title x_legend y_legend theme layers default_type value_formatter point_markers point_markers_rotation point_markers_ticks rasterizer key_formatter).each do |arg|
         self.send("#{arg}=".to_sym, options.delete(arg.to_sym)) unless options[arg.to_sym].nil?
       end
-      
+
       raise ArgumentError, "Some options provided are not supported: #{options.keys.join(' ')}." if options.size > 0
     end
-    
+
     # Renders the graph in it's current state to an SVG object.
     #
     # Options:
@@ -137,7 +137,7 @@ module Scruffy
     # theme:: Theme used to render graph for this render only.
     # min_value:: Overrides the calculated minimum value used for the graph.
     # max_value:: Overrides the calculated maximum value used for the graph.
-    # renderer:: Provide a Renderer object to use instead of the default. 
+    # renderer:: Provide a Renderer object to use instead of the default.
     #
     # For other image formats:
     # as:: File format to render to ('PNG', 'JPG', etc)
@@ -167,39 +167,39 @@ module Scruffy
       #   options[:actual_size] = options[:size]
       #   options[:size] = [800, (800.to_f * (options[:actual_size][1].to_f / options[:actual_size][0].to_f))]
       # end
-      
+
       svg = ( options[:renderer].nil? ? self.renderer.render( options ) : options[:renderer].render( options ) )
-      
+
       # SVG to file.
       if options[:to] && options[:as].nil?
         File.open(options[:to], 'w') { |file|
           file.write(svg)
         }
       end
-      
+
       options[:as] ? rasterizer.rasterize(svg, options) : svg
     end
-    
+
     def renderer=(val)
       raise ArgumentError, "Renderer must include a #render(options) method." unless (val.respond_to?(:render) && val.method(:render).arity.abs > 0)
-      
+
       @renderer = val
     end
-    
+
     alias :layout :renderer
-    
+
     def component(id)
       renderer.component(id)
     end
-    
+
     def remove(id)
       renderer.remove(id)
     end
-    
+
     private
       def internal_state
         @internal_state ||= GraphState.new
       end
-      
+
   end
 end
